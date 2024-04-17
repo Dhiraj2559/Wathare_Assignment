@@ -1,72 +1,48 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import Plot from 'react-plotly.js';
+import Chart from 'chart.js/auto';
 
 function App() {
   const [data, setData] = useState([]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await axios.get('http://localhost:5000/data');
-        setData(response.data);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      }
-    };
-
     fetchData();
   }, []);
 
-  // Map data to plot points
-  const getPlotData = () => {
-    const timestamps = data.map(item => new Date(item.ts)); // Assuming your data has a timestamp
-    const statuses = data.map(item => item.machine_status); // Assuming your data has a machine_status
+  const fetchData = async () => {
+    try {
+      const response = await axios.get('http://localhost:5000/data');
+      setData(response.data);
+      plotData(response.data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
-    // Define different series based on the status
-    const yellowPoints = {
-      x: timestamps.filter((_, index) => statuses[index] === 0),
-      y: statuses.filter(status => status === 0),
-      type: 'scatter',
-      mode: 'markers',
-      marker: { color: 'yellow' },
-      name: 'Yellow Status'
-    };
-    
-    const greenPoints = {
-      x: timestamps.filter((_, index) => statuses[index] === 1),
-      y: statuses.filter(status => status === 1),
-      type: 'scatter',
-      mode: 'markers',
-      marker: { color: 'green' },
-      name: 'Green Status'
-    };
-    
-    const redPoints = {
-      x: timestamps.filter((_, index) => statuses[index] === -1),
-      y: statuses.filter(status => status === -1),
-      type: 'scatter',
-      mode: 'markers',
-      marker: { color: 'red' },
-      name: 'Red Status'
-    };
+  const plotData = (data) => {
+    const timestamps = data.map((item) => new Date(item.ts));
+    const values = data.map((item) => item.machine_status);
 
-    return [yellowPoints, greenPoints, redPoints];
+    const ctx = document.getElementById('myChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: timestamps,
+        datasets: [{
+          label: 'Machine Cycle Status',
+          data: values,
+          backgroundColor: values.map(value => value === 0 ? 'yellow' : (value === 1 ? 'green' : 'red')),
+          fill: true
+        }]
+      }
+    });
   };
 
   return (
     <div>
-      <Plot
-        data={getPlotData()}
-        layout={{
-          title: 'Machine Cycle Status',
-          xaxis: { title: 'Time' },
-          yaxis: { title: 'Status', range: [-1, 1] },
-          legend: { orientation: 'h' }
-        }}
-      />
+      <canvas id="myChart" width="0.1" height="0.1"></canvas>
     </div>
   );
 }
 
-export default App;
+export default App;
